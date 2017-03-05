@@ -7,6 +7,7 @@ import com.mashape.unirest.http.exceptions.UnirestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.telegram.telegrambots.api.objects.Message;
@@ -55,7 +56,8 @@ public class DescriptionKeeperController {
         final Instant unixTime = Instant.ofEpochSecond(receivedDate);
         final Instant now = Instant.now();
 
-        System.out.println("received at: " + unixTime + " / " + receivedDate + " (now = " + now.toEpochMilli() + ")");
+        final long nowInSeconds = now.toEpochMilli() / 1000;
+        System.out.println("received at: " + unixTime + " / " + receivedDate + " (now = " + nowInSeconds + ")");
         if (unixTime.plusSeconds(MAX_SECOND_AFTER_RECEIVING).isBefore(now)) {
             System.out.println("Ignoring old message!");
             return;
@@ -82,6 +84,7 @@ public class DescriptionKeeperController {
         final String message = kvstoreService.getMessage(chatId);
         if (message == null) {
             System.out.println("chat " + chatId + " does not contain key yet");
+            return;
         }
         final URI uri = UriComponentsBuilder.fromUriString(BASE_URL)
                 .path("{bot_id}/sendMessage")
@@ -91,9 +94,12 @@ public class DescriptionKeeperController {
                 .buildAndExpand(botId)
                 .toUri();
 
-        final Object forObject = template.getForObject(uri, Object.class);
-        System.out.println("for object");
-        System.out.println(forObject);
+        try {
+            final Object forObject = template.getForObject(uri, Object.class);
+            System.out.println(forObject);
+        } catch (HttpClientErrorException httpClientErrorException) {
+            System.err.println(httpClientErrorException.getMessage() + " for uri= " + uri);
+        }
     }
 
     private void setDescription(Long chatId, String text) {

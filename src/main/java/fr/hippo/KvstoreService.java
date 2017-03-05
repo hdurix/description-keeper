@@ -61,7 +61,7 @@ public class KvstoreService {
                     .asObject(KvstoreMessage.class);
             return response.getBody().getValue();
         } catch (UnirestException e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
             return null;
         }
     }
@@ -75,7 +75,7 @@ public class KvstoreService {
                     .asJson();
             System.out.println(response.getBody());
         } catch (UnirestException e) {
-            e.printStackTrace();
+            System.err.println(e.getMessage());
             return null;
         }
         return newTitle;
