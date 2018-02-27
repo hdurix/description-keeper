@@ -1,25 +1,17 @@
 package fr.hippo;
 
-import com.mashape.unirest.http.HttpResponse;
-import com.mashape.unirest.http.JsonNode;
-import com.mashape.unirest.http.Unirest;
-import com.mashape.unirest.http.exceptions.UnirestException;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.util.UriComponentsBuilder;
 import org.telegram.telegrambots.api.objects.Message;
-import org.telegram.telegrambots.api.objects.MessageEntity;
 import org.telegram.telegrambots.api.objects.Update;
 
 import java.net.URI;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 import static org.telegram.telegrambots.ApiConstants.BASE_URL;
 
@@ -30,6 +22,7 @@ public class DescriptionKeeperController {
     private static final String SET_COMMAND = "/set";
     private static final String GET_COMMAND = "/get";
     private static final String ADD_COMMAND = "/add";
+    private static final String REMOVE_COMMAND = "/remove";
     private static final String MESSAGE_SEPARATOR = "\n";
     private static final int MAX_SECOND_AFTER_RECEIVING = 60 * 60; // 1 hour
 
@@ -72,7 +65,9 @@ public class DescriptionKeeperController {
                 setDescription(chatId, text);
             } else if (text.startsWith(ADD_COMMAND)) {
                 addDescription(chatId, text);
-            } else if (text.equals(GET_COMMAND)) {
+            } else if (text.startsWith(REMOVE_COMMAND)) {
+                removeDescription(chatId, text);
+            } else if (text.startsWith(GET_COMMAND)) {
                 getDescription(chatId);
             }
         }
@@ -114,6 +109,20 @@ public class DescriptionKeeperController {
             message = "";
         }
         final String newTitle = message + MESSAGE_SEPARATOR + text.substring(ADD_COMMAND.length() + 1);
+        System.out.println("newTitle = " + newTitle);
+        kvstoreService.putMessage(chatId, newTitle);
+    }
+
+    private void removeDescription(Long chatId, String text) {
+        String message = kvstoreService.getMessage(chatId);
+        if (message == null) {
+            message = "";
+        }
+        String toDelete = text.substring(REMOVE_COMMAND.length() + 1);
+        if (!StringUtils.isEmpty(toDelete) && message.contains(MESSAGE_SEPARATOR + toDelete)) {
+            toDelete = MESSAGE_SEPARATOR + toDelete;
+        }
+        final String newTitle = message.replaceFirst(toDelete, "");
         System.out.println("newTitle = " + newTitle);
         kvstoreService.putMessage(chatId, newTitle);
     }
